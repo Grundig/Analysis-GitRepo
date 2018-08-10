@@ -7,7 +7,7 @@ coinc = 1000;%length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
 cw = ceil(CoincWindow / 0.256);                                             % number of samples in coincidence window
 RunData = struct();
-LowToHiRes = uint64(zeros(1,coinc));
+LowToHiRes = int64(zeros(1,coinc));
 texp;
 load('texp.mat');                                                           % Loads a matrix containing all possible travel times
 %parpool;
@@ -16,8 +16,8 @@ load('texp.mat');                                                           % Lo
 % .time value is the high resolution (0.256 ns intervals) since the start of the run.
 
 parfor n = 1:coinc
-    LowToHiRes(n) = uint64(data.LowResHitTime(n)-data.LowResHitTime(1))*3.90625e+10;
-    RunData(n).time = uint64(data.HiResHitTime(n)) + LowToHiRes(n);
+    LowToHiRes(n) = int64(data.LowResHitTime(n)-data.LowResHitTime(1))*3.90625e+10;
+    RunData(n).time = int64(data.HiResHitTime(n)) + LowToHiRes(n);
     RunData(n).pixel = data.Pixel(n);
 end
 
@@ -50,10 +50,17 @@ parfor u = 1:uL
     
     Pindex = find((dt>ut-cw) .* (dt<ut+cw)) + a-1;
     
-   f = length(Pindex);
+    f = length(Pindex);
     if f > 0
-        timePairs(u,:) = [UpData(u).time, DownData(Pindex(1)).time];
-        pixPairs(u,:) = [UpData(u).pixel, DownData(Pindex(1)).pixel];
+        dCheckHit = [DownData(Pindex).pixel]+1; 
+        uCheckHit = UpData(u).pixel-15;
+        timeCheckHit = Te(uCheckHit,dCheckHit);
+        timeRealHit = abs(double([DownData(Pindex).time] - UpData(u).time)*0.256);
+        [~,x] = min(abs(timeCheckHit - timeRealHit));
+        HitIndex = Pindex(x);
+    
+        timePairs(u,:) = [UpData(u).time, DownData(HitIndex).time];
+        pixPairs(u,:) = [UpData(u).pixel, DownData(HitIndex).pixel];
     end
 end
 RunTime = toc

@@ -32,35 +32,28 @@ DownData = RunData([RunData.pixel] < 16);
 
 
 %%
-timePairs = int64.empty(0,2);
-pixPairs = single.empty(0,2);
+uL = length([UpData.pixel]);
+timePairs = int64(zeros(uL,2));
+pixPairs = single(zeros(uL,2));
 P=0;
 
-Closest = nearestpoint([UpData.time],[DownData.time]);
-L = length([DownData.pixel]);
-parfor u = 1:length([UpData.pixel])
 
-%     timePairs(1:end,1) = UpData(Closest).time;
-%     timePairs(1:end,2) = DownData(Closest).time;        
-%     pixPairs(1:end,1) = UpData(Closest).pixel;
-%     pixPairs(1:end,2) = DownData(Closest).pixel;
-%     
+Closest = nearestpoint([UpData.time],[DownData.time]);
+dL = length([DownData.pixel]);
+
+parfor u = 1:uL
+
     a = max(Closest(u)-10, 1);
-    b = min(Closest(u)+10, L);
+    b = min(Closest(u)+10, dL);
     dt = [DownData(a:b).time];
     ut = UpData(u).time;
     
     Pindex = find((dt>ut-cw) .* (dt<ut+cw)) + a-1;
     
-    f = length(Pindex);
-    P = size(pixPairs,1);
-    y = P+1:P+f;
+   f = length(Pindex);
     if f > 0
-        timePairs(y,1) = UpData(u).time;
-        timePairs(y,2) = [DownData(Pindex).time]';
-        pixPairs(y,1) = UpData(u).pixel;
-        pixPairs(y,2) = [DownData(Pindex).pixel]';
-       
+        timePairs(u,:) = [UpData(u).time, DownData(Pindex(1)).time];
+        pixPairs(u,:) = [UpData(u).pixel, DownData(Pindex(1)).pixel];
     end
 end
 RunTime = toc
@@ -69,11 +62,15 @@ RunTime = toc
 td = zeros(length(pixPairs),1);
 treal = double.empty(0);
 parfor i = [1:length(pixPairs)]
+    try
     pix1 = pixPairs(i,1)-15;
     pix2 = pixPairs(i,2)+1;
     texpect = Te(pix1,pix2);
     treal = abs(double(timePairs(i,1)-timePairs(i,2))*0.256);
     td(i) = treal-texpect;
+    catch
+        td(i) = NaN;
+    end
 end
 
 histogram(td,50)

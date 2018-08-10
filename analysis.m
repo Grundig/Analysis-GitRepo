@@ -3,7 +3,7 @@ tic;
 filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
 run = '120';
 data = h5read(filepath, '/RUN 120/coincidences');
-coinc = 200000;%length(data.Pixel);
+coinc = length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
 cw = ceil(CoincWindow / 0.256);                                             % number of samples in coincidence window
 RunData = struct();

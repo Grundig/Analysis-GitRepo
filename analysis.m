@@ -3,7 +3,7 @@ tic;
 filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
 run = '120';
 data = h5read(filepath, '/RUN 120/coincidences');
-coinc = 1000;%length(data.Pixel);
+coinc = 200000;%length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
 cw = ceil(CoincWindow / 0.256);                                             % number of samples in coincidence window
 RunData = struct();
@@ -40,7 +40,7 @@ P=0;
 
 Closest = nearestpoint([UpData.time],[DownData.time]);
 dL = length([DownData.pixel]);
-
+hitIndex = zeros(uL,1);
 parfor u = 1:uL
 
     a = max(Closest(u)-10, 1);
@@ -50,36 +50,46 @@ parfor u = 1:uL
     
     Pindex = find((dt>ut-cw) .* (dt<ut+cw)) + a-1;
     
-    f = length(Pindex);
-    if f > 0
+   if ~isempty(Pindex)
         dCheckHit = [DownData(Pindex).pixel]+1; 
         uCheckHit = UpData(u).pixel-15;
         timeCheckHit = Te(uCheckHit,dCheckHit);
         timeRealHit = abs(double([DownData(Pindex).time] - UpData(u).time)*0.256);
         [~,x] = min(abs(timeCheckHit - timeRealHit));
-        HitIndex = Pindex(x);
+        hitIndex(u) = Pindex(x);
     
-        timePairs(u,:) = [UpData(u).time, DownData(HitIndex).time];
-        pixPairs(u,:) = [UpData(u).pixel, DownData(HitIndex).pixel];
+        
     end
 end
-RunTime = toc
 
+matchIndex = hitIndex~=0;
+hitIndex = hitIndex(matchIndex);
+timePairs = [[UpData(matchIndex).time]', [DownData(hitIndex).time]'];
+pixPairs = [[UpData(matchIndex).pixel]'-15, [DownData(hitIndex).pixel]'+1];
+
+RunTimeFind = toc
 %% Confidence Calculation
-td = zeros(length(pixPairs),1);
-treal = double.empty(0);
-parfor i = [1:length(pixPairs)]
-    try
-    pix1 = pixPairs(i,1)-15;
-    pix2 = pixPairs(i,2)+1;
-    texpect = Te(pix1,pix2);
-    treal = abs(double(timePairs(i,1)-timePairs(i,2))*0.256);
-    td(i) = treal-texpect;
-    catch
-        td(i) = NaN;
-    end
-end
 
-histogram(td,50)
-sigma = std(td)
 
+
+%pixPairs = pixPairs(matchIndex,:);
+%timePairs = timePairs(matchIndex,:);
+%treal = abs(double(timePairs(:,1)-timePairs(:,2))*0.256);
+% parfor i = [1:length(pixPairs)]
+%     try
+%     pix1 = pixPairs(i,1);
+%     pix2 = pixPairs(i,2);
+%     texpect = Te(pix1,pix2);
+%     treal = abs(double(timePairs(i,1)-timePairs(i,2))*0.256);
+%     td(i) = treal-texpect;
+%     catch
+%         td(i) = NaN;
+%     end
+% end
+treal = (double(timePairs(:,1)-timePairs(:,2))*0.256);
+texpected = Te(sub2ind(size(Te),pixPairs(:,1),pixPairs(:,2)));
+td = abs(treal)-texpected;
+histogram(td)
+sigma = std(td,'omitnan')
+plot(treal,texpected,'.')
+RunTimeTot = toc

@@ -3,7 +3,7 @@ tic;
 filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
 run = '120';
 data = h5read(filepath, '/RUN 120/coincidences');
-coinc = length(data.Pixel);
+coinc = 1000000;%length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
 cw = ceil(CoincWindow / 0.256);                                             % number of samples in coincidence window
 RunData = struct();
@@ -16,7 +16,7 @@ load('texp.mat');                                                           % Lo
 % .time value is the high resolution (0.256 ns intervals) since the start of the run.
 
 parfor n = 1:coinc
-    LowToHiRes(n) = int64(data.LowResHitTime(n)-data.LowResHitTime(1))*3.90625e+10;
+    LowToHiRes(n) = int64(data.LowResHitTime(n)-data.LowResHitTime(1))*3.90625e+9;
     RunData(n).time = int64(data.HiResHitTime(n)) + LowToHiRes(n);
     RunData(n).pixel = data.Pixel(n);
 end
@@ -48,7 +48,7 @@ parfor u = 1:uL
     dt = [DownData(a:b).time];
     ut = UpData(u).time;
     
-    Pindex = find((dt>ut-cw) .* (dt<ut+cw)) + a-1;
+    Pindex = find((dt>ut) .* (dt<ut+cw)) + a-1;
     
    if ~isempty(Pindex)
         dCheckHit = [DownData(Pindex).pixel]+1; 
@@ -67,29 +67,13 @@ hitIndex = hitIndex(matchIndex);
 timePairs = [[UpData(matchIndex).time]', [DownData(hitIndex).time]'];
 pixPairs = [[UpData(matchIndex).pixel]'-15, [DownData(hitIndex).pixel]'+1];
 
-RunTimeFind = toc
 %% Confidence Calculation
 
-
-
-%pixPairs = pixPairs(matchIndex,:);
-%timePairs = timePairs(matchIndex,:);
-%treal = abs(double(timePairs(:,1)-timePairs(:,2))*0.256);
-% parfor i = [1:length(pixPairs)]
-%     try
-%     pix1 = pixPairs(i,1);
-%     pix2 = pixPairs(i,2);
-%     texpect = Te(pix1,pix2);
-%     treal = abs(double(timePairs(i,1)-timePairs(i,2))*0.256);
-%     td(i) = treal-texpect;
-%     catch
-%         td(i) = NaN;
-%     end
-% end
 treal = (double(timePairs(:,1)-timePairs(:,2))*0.256);
 texpected = Te(sub2ind(size(Te),pixPairs(:,1),pixPairs(:,2)));
 td = abs(treal)-texpected;
+
+
 histogram(td)
 sigma = std(td,'omitnan')
-plot(treal,texpected,'.')
-RunTimeTot = toc
+RunTime = toc

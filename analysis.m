@@ -3,22 +3,24 @@ tic;
 filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
 run = '120';
 data = h5read(filepath, '/RUN 120/coincidences');
-coinc = 1000000;%length(data.Pixel);
+coinc = 100000;%length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
-cw = ceil(CoincWindow / 0.256);                                             % number of samples in coincidence window
+cw = ceil(CoincWindow / 0.25);                                             % number of samples in coincidence window
 RunData = struct();
 LowToHiRes = int64(zeros(1,coinc));
 texp;
-load('texp.mat');                                                           % Loads a matrix containing all possible travel times
+load('texp.mat');                                                          % Loads a matrix containing all possible travel times
 %parpool;
 
 % In this loop the high and low resolution timestamps are combined and the
-% .time value is the high resolution (0.256 ns intervals) since the start of the run.
+% .time value is the high resolution (0.25 ns intervals) since the start of the run.
 
 parfor n = 1:coinc
-    LowToHiRes(n) = int64(data.LowResHitTime(n)-data.LowResHitTime(1))*3.90625e+9;
+    LowToHiRes(n) = int64(data.LowResHitTime(n)-data.LowResHitTime(1))*4e+9;
     RunData(n).time = int64(data.HiResHitTime(n)) + LowToHiRes(n);
     RunData(n).pixel = data.Pixel(n);
+    RunData(n).realtimeLow = int32(data.LowResHitTime(n));
+    RunData(n).realtimeHi = int32(data.HiResHitTime(n));
 end
 
 
@@ -35,6 +37,8 @@ DownData = RunData([RunData.pixel] < 16);
 uL = length([UpData.pixel]);
 timePairs = int64(zeros(uL,2));
 pixPairs = single(zeros(uL,2));
+realtimeLowPairs = uint32(zeros(uL,2));
+realtimeHiPairs = uint32(zeros(uL,2));
 P=0;
 
 
@@ -54,11 +58,9 @@ parfor u = 1:uL
         dCheckHit = [DownData(Pindex).pixel]+1; 
         uCheckHit = UpData(u).pixel-15;
         timeCheckHit = Te(uCheckHit,dCheckHit);
-        timeRealHit = abs(double([DownData(Pindex).time] - UpData(u).time)*0.256);
+        timeRealHit = abs(double([DownData(Pindex).time] - UpData(u).time)*0.25);
         [~,x] = min(abs(timeCheckHit - timeRealHit));
         hitIndex(u) = Pindex(x);
-    
-        
     end
 end
 
@@ -66,10 +68,12 @@ matchIndex = hitIndex~=0;
 hitIndex = hitIndex(matchIndex);
 timePairs = [[UpData(matchIndex).time]', [DownData(hitIndex).time]'];
 pixPairs = [[UpData(matchIndex).pixel]'-15, [DownData(hitIndex).pixel]'+1];
+realtimeLowPairs = [[UpData(matchIndex).realtimeLow]',[DownData(hitIndex).realtimeLow]'];
+realtimeHiPairs = [[UpData(matchIndex).realtimeHi]',[DownData(hitIndex).realtimeHi]'];
 
 %% Confidence Calculation
 
-treal = (double(timePairs(:,1)-timePairs(:,2))*0.256);
+treal = (double(timePairs(:,1)-timePairs(:,2))*0.25);
 texpected = Te(sub2ind(size(Te),pixPairs(:,1),pixPairs(:,2)));
 td = abs(treal)-texpected;
 
@@ -83,5 +87,21 @@ sigma = std(td,'omitnan')
 
 RunTime = toc
 
-%% Weather data
-
+%% Muon Candidates
+muonCand = struct('timeLow',[],'timeHi',[],'confidence',[]);
+parfor i = 1:length(realtimeHiPairs(1))
+    if realtimeLowPairs(i,1)== realtimeLowPairs(i,2)
+        muonCand(i).timeLow = realtimeLowPairs(i,1);
+        muonCand(i).timeHi = mean([realtimeHiPairs(i,1),realtimeHiPairs(i,2)],'native');
+    else
+        muonCand(i).timeLow = min(realtimeLowPairs(i,1),realtimeLowPairs(i,2));
+        muonCand(i).timeHi = mean([realtimeHiPairs(i,1),realtimeHiPairs(i,2)+2e+9],'native');
+        if muonCand(i).timeHi >= 4e+9
+            muonCand(i).timeLow = muonCand(i).timeLow + 1;
+            muonCand(i).timeHi = muonCand(i).timeHi - 4e+9;
+        end
+    end
+    z = td(i)/sigma;
+    
+    muonCand(i).confidence = 1-normcdf(z)
+end

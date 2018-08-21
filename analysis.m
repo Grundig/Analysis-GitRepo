@@ -1,4 +1,4 @@
-%% Initialisation
+%% An Initialisation
 tic;
 filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
 run = '120';
@@ -76,4 +76,12 @@ td = abs(treal)-texpected;
 
 histogram(td)
 sigma = std(td,'omitnan')
+
+%% Direction Detection
+
+
+
 RunTime = toc
+
+%% Weather data
+

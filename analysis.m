@@ -1,6 +1,7 @@
 %% An Initialisation
 clear all;
-filedate = lower(datestr(floor(now-1)));
+filedate = lower(datestr(floor(now)));
+parpool(2);
 try
     filepath = ['D:\Data\2018\' filedate '.hdf5'];
     info = h5info(filepath);
@@ -69,7 +70,7 @@ parfor u = 1:uL
     dt = [DownData(a:b).time];
     ut = UpData(u).time;
     
-    Pindex = find((dt>ut) .* (dt<ut+cw)) + a-1;
+    Pindex = find((dt>ut-4) .* (dt<ut+cw)) + a-1;
     
    if ~isempty(Pindex)
         dCheckHit = [DownData(Pindex).pixel]+1; 
@@ -124,7 +125,7 @@ parfor i = 1:lP
     muonCand(i).confidence = 1-normcdf(z)
 end
 
-save(['DataSave/' lower(date) ' candidates.mat'],'muonCand')
+save(['D:\Data\2018\Analysis Save\' lower(date) ' candidates.mat'],'muonCand')
 %% End Cleanup
 clear all;
 close all;

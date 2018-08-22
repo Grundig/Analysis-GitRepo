@@ -1,7 +1,8 @@
 %% An Initialisation
 clear all;
+filedate = lower(datestr(floor(now-1)));
 try
-    filepath = ['D:\Data\2018\' lower(date) '.hdf5'];
+    filepath = ['D:\Data\2018\' filedate '.hdf5'];
     info = h5info(filepath);
     groups = info.Groups;
     lG = length(groups);

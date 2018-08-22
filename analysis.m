@@ -1,7 +1,29 @@
 %% An Initialisation
-filepath = 'C:\Users\laptop\Desktop\2018\2018-08-07.hdf5';
-run = '120';
-data = h5read(filepath, '/RUN 120/coincidences');
+clear all;
+try
+    filepath = ['D:\Data\2018\' lower(date) '.hdf5'];
+    info = h5info(filepath);
+    groups = info.Groups;
+    lG = length(groups);
+    runname = string(groups(end).Name);
+    data = h5read(filepath,[char(runname) '/coincidences']);
+    
+    
+%     data = struct('Pixel',[],'HiResHitTime',uint64.empty(0),'LowResHitTime',uint64.empty(0),'DeltaT',[]);
+%     for n = 1:lG
+%         runname = string(groups(n).Name);
+%         data.Pixel = cat(1,data.Pixel,h5read(filepath,[char(runname) '/coincidences/Pixel']));
+%         data.HiResHitTime = cat(1,data.HiResHitTime,h5read(filepath,[char(runname) '/coincidences/HiResHitTime']));
+%         data.LowResHitTime = cat(1,data.LowResHitTime,h5read(filepath,[char(runname) '/coincidences/LowResHitTime']));
+%         data.DeltaT = cat(1,data.DeltaT,h5read(filepath,[char(runname) '/coincidences/DeltaT']));
+%     end
+     
+   
+catch
+    disp('File not found!')
+    return
+end
+%%
 coinc = length(data.Pixel);
 CoincWindow = 5;                                                           % coincidence window in ns
 cw = ceil(CoincWindow / 0.25);                                             % number of samples in coincidence window
@@ -100,3 +122,9 @@ parfor i = 1:lP
     
     muonCand(i).confidence = 1-normcdf(z)
 end
+
+save(['DataSave/' lower(date) ' candidates.mat'],'muonCand')
+%% End Cleanup
+clear all;
+close all;
+delete('texp.mat');

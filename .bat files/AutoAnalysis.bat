@@ -1,0 +1,1 @@
+"C:\Program Files\MATLAB\R2018a\bin\matlab.exe" -nodisplay -nosplash -nodesktop -r "try, run('C:\Users\CRT Controller\CRTC Labview Application\CRT-2018\analysis.m'), catch, exit, end, exit"

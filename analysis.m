@@ -115,7 +115,7 @@ for v = 1:lG
         muonCand(i).confidence = 1-normcdf(z)
     end
     
-    save(['D:\Data\2018\Analysis Save\' 'BERG-01-' datestr((now-1),'YYYY-mm-dd') '-RUN' num2str(v) '.bin'],'muonCand')
+    save(['D:\Data\EEE Analysis\' 'BERG-01-' datestr((now-1),'YYYY-mm-dd') '-RUN' num2str(v) '.bin'],'muonCand')
 end
 %% End Cleanup
 clear all;

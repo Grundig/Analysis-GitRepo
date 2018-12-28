@@ -97,7 +97,6 @@ for v = 1:lG
     
     %% Direction Detection
     hitDirection = getHitDirection; % Load hit direction and inclination map
-       
     
     %% Muon Candidates
     lP = length(realtimeHiPairs);
@@ -122,7 +121,23 @@ for v = 1:lG
         muonCand(i).direction = hitDirection.direction(sub2ind(size(hitDirection.direction),pixPairs(i,1),pixPairs(i,2)));
         muonCand(i).inclination = hitDirection.inclination(sub2ind(size(hitDirection.inclination),pixPairs(i,1),pixPairs(i,2)));
     end
+    %% Hit Rate
+    hitRate = diff(find([1, diff([muonCand.timeLow]), 1]));
+    hitLabels = unique([muonCand.timeLow]);
     
+    % Fill no-hit times
+    hitLabelsMissing = setdiff([min(hitLabels):max(hitLabels)], hitLabels);
+    hitLabels = [hitLabels hitLabelsMissing];
+    hitRate = [hitRate zeros(1,length(hitLabelsMissing))];
+    
+    % Timewise sorting 
+    [hitLabels, sortIndex] = sort(hitLabels);
+    hitRate = hitRate(sortIndex);
+    
+    HitRate = struct('time', num2cell(uint32(hitLabels)), 'rate', num2cell(uint16(hitRate)));
+    
+    
+    save(['D:\Data\EEE Analysis\' 'BERG-01-' datestr((now-1),'YYYY-mm-dd') '-RUN' num2str(v) '_hitrates.bin'],'HitRate')
     save(['D:\Data\EEE Analysis\' 'BERG-01-' datestr((now-1),'YYYY-mm-dd') '-RUN' num2str(v) '.bin'],'muonCand')
 end
 %% End Cleanup

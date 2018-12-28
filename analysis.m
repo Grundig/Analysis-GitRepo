@@ -1,7 +1,14 @@
 %% An Initialisation
 clear all;
 filedate = lower(datestr(floor(now-1)));
-%parpool(2);
+global HEIGHT PIXELSIZE DETECTOR_NORTH;
+
+% Detector design:
+DETECTOR_NORTH = 141; % used to correct for position of detector against real North 
+                       %TODO verify real north direction
+HEIGHT = 0.7;
+PIXELSIZE = 0.25;
+
 try
     filepath = ['D:\Data\2018\' filedate '.hdf5'];
     info = h5info(filepath);
@@ -17,12 +24,11 @@ for v = 1:lG
     runname = string(groups(v).Name);
     data = h5read(filepath,[char(runname) '/coincidences']);
     coinc = length(data.Pixel);
-    CoincWindow = 5;                                                           % coincidence window in ns
-    cw = ceil(CoincWindow / 0.25);                                             % number of samples in coincidence window
+    CoincWindow = 5;                                                       % coincidence window in ns
+    cw = ceil(CoincWindow / 0.25);                                         % number of samples in coincidence window
     RunData = struct();
     LowToHiRes = int64(zeros(1,coinc));
-    texp;
-    load('texp.mat');                                                          % Loads a matrix containing all possible travel times
+    Te = texp;                                                             % Creates a matrix containing all possible travel times
     
     % In this loop the high and low resolution timestamps are combined and the
     % .time value is the high resolution (0.25 ns intervals) since the start of the run.
@@ -90,10 +96,8 @@ for v = 1:lG
     sigma = std(td,'omitnan');
     
     %% Direction Detection
-    
-    
-    
-    
+    hitDirection = getHitDirection; % Load hit direction and inclination map
+       
     
     %% Muon Candidates
     lP = length(realtimeHiPairs);
@@ -101,6 +105,8 @@ for v = 1:lG
     muonCand.timeLow = uint32(zeros(lP,1));
     muonCand.timeHi = uint64(zeros(lP,1));
     muonCand.confidence = double(zeros(lP,1));
+    muonCand.direction = single(zeros(lP,1));
+    muonCand.inclination = single(zeros(lP,1));
     
     parfor i = 1:lP
         if realtimeLowPairs(i,1)== realtimeLowPairs(i,2)
@@ -111,8 +117,10 @@ for v = 1:lG
             muonCand(i).timeHi = mean([realtimeHiPairs(i,1),realtimeHiPairs(i,2)+2e+9],'native');
         end
         z = td(i)/sigma;
-        
         muonCand(i).confidence = 1-normcdf(z)
+        
+        muonCand(i).direction = hitDirection.direction(sub2ind(size(hitDirection.direction),pixPairs(i,1),pixPairs(i,2)));
+        muonCand(i).inclination = hitDirection.inclination(sub2ind(size(hitDirection.inclination),pixPairs(i,1),pixPairs(i,2)));
     end
     
     save(['D:\Data\EEE Analysis\' 'BERG-01-' datestr((now-1),'YYYY-mm-dd') '-RUN' num2str(v) '.bin'],'muonCand')
@@ -120,4 +128,3 @@ end
 %% End Cleanup
 clear all;
 close all;
-delete('texp.mat');

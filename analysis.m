@@ -5,7 +5,7 @@ global HEIGHT PIXELSIZE DETECTOR_NORTH;
 
 % Detector design:
 DETECTOR_NORTH = 141; % used to correct for position of detector against real North 
-                       %TODO verify real north direction
+                      % TODO verify real north direction
 HEIGHT = 0.7;
 PIXELSIZE = 0.25;
 
@@ -121,10 +121,22 @@ for v = 1:lG
         muonCand(i).direction = hitDirection.direction(sub2ind(size(hitDirection.direction),pixPairs(i,1),pixPairs(i,2)));
         muonCand(i).inclination = hitDirection.inclination(sub2ind(size(hitDirection.inclination),pixPairs(i,1),pixPairs(i,2)));
     end
-    %% Hit Rate
-    hitRate = diff(find([1, diff([muonCand.timeLow]), 1]));
-    hitLabels = unique([muonCand.timeLow]);
     
+    %% Plot directions
+    [angleLabels, angleRate] = countIdentical([muonCand.direction]);
+    angleLabels = deg2rad(angleLabels);
+    u = cos(angleLabels).*angleRate;
+    v = sin(angleLabels).*angleRate;
+    
+    figure();
+    compass(u,v);
+    hold on;
+    compass(angleRate(end), 0, 'r'); % vertical muons
+    view([90, -90]);  % clockwise (left-handed) + North at the top
+    title('Muon directions and rates');
+    %% Hit Rate
+    [hitLabels, hitRate] = countIdentical([muonCand.timeLow]);
+        
     % Fill no-hit times
     hitLabelsMissing = setdiff([min(hitLabels):max(hitLabels)], hitLabels);
     hitLabels = [hitLabels hitLabelsMissing];
